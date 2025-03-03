@@ -2,14 +2,11 @@ import numpy as np
 
 # 1. 读取词表并构建反向映射和词频
 def load_vocab(vocab_file):
-    vocab = {}
-    reverse_vocab = {}
-    word_freq = {}
+    vocab,reverse_vocab,word_freq = {},{},{}
     with open(vocab_file, 'r', encoding='utf-8') as f:
         for line in f:
             word, freq, token = line.strip().split('\t')
-            token = int(token)
-            freq = float(freq)
+            token freq = int(token),float(freq)
             vocab[word] = token
             reverse_vocab[token] = word
             word_freq[token] = freq
@@ -31,7 +28,7 @@ def load_data(tokenized_file, vocab_file, seq_length, stop_words):
     with open(tokenized_file, 'r', encoding='utf-8') as f:
         train_texts = f.readlines()
     train_data = np.array([np.concatenate((tokenizer(text)[:seq_length],
-                                          np.zeros(seq_length - len(tokenizer(text)), dtype=int)))
+                          np.zeros(seq_length - len(tokenizer(text)), dtype=int)))
                           if len(tokenizer(text)) < seq_length else tokenizer(text)[:seq_length]
                           for text in train_texts])
     labels = np.roll(train_data, -1, axis=1)
@@ -45,8 +42,7 @@ def rotary_pos_encoding(seq_len, dim, theta_base=10000):
     dims = np.arange(dim // 2)
     theta = 1.0 / (theta_base ** (2 * dims / dim))
     angles = np.outer(positions, theta)
-    sin = np.sin(angles)
-    cos = np.cos(angles)
+    sin,cos = np.sin(angles),np.cos(angles)
     return sin, cos
 
 def apply_rotary(x, sin, cos):
@@ -54,11 +50,9 @@ def apply_rotary(x, sin, cos):
     # 如果输入序列超过预定义长度，扩展 sin 和 cos
     if seq > sin.shape[0]:
         sin_extended, cos_extended = rotary_pos_encoding(seq, dim)
-        sin = sin_extended
-        cos = cos_extended
+        sin,cos = sin_extended, cos_extended
     else:
-        sin = sin[:seq]
-        cos = cos[:seq]
+        sin,cos = sin[:seq], cos[:seq]
     x1, x2 = x[..., :dim//2], x[..., dim//2:]
     rot_x1 = x1 * cos[None, :, :] - x2 * sin[None, :, :]
     rot_x2 = x1 * sin[None, :, :] + x2 * cos[None, :, :]
@@ -119,7 +113,7 @@ class TransformerLayer:
         ff_out = self.ff.forward(x)
         return x + ff_out
 
-class NanoGPT:
+class GPT:
     def __init__(self, vocab_size, embedding_dim, heads, layers, seq_length):
         self.embed = Embedding(vocab_size, embedding_dim)
         self.layers = [TransformerLayer(embedding_dim, heads) for _ in range(layers)]
@@ -147,8 +141,7 @@ def train(model, data, labels, freq_array, epochs=100, lr=0.01):
     for epoch in range(epochs):
         total_loss = 0
         for i in range(len(data)):
-            x = data[i:i+1]
-            y = labels[i:i+1]
+            x,y = data[i:i+1], labels[i:i+1]
             logits = model.forward(x)
             adjusted_logits = logits - np.log(freq_array + 1e-6)
             probs = np.exp(adjusted_logits) / np.sum(np.exp(adjusted_logits), axis=-1, keepdims=True)
@@ -200,8 +193,6 @@ def generate(model, start_text, tokenizer, reverse_vocab, freq_array, max_len=16
 
     return seq
 
-
-
 # 3. 数据准备
 vocab_size = 100  ## 词表大小，目前设置为100，是经过加工之后的文本
 seq_length = 16   ## 最大序列长度，目前设置为16
@@ -215,7 +206,7 @@ vocab_file = 'vocab.txt'
 train_data, labels, tokenizer, reverse_vocab, freq_array = load_data(tokenized_file, vocab_file, seq_length, stop_words)
 
 # 8. 执行
-model = NanoGPT(vocab_size, embedding_dim, heads, layers, seq_length)
+model = GPT(vocab_size, embedding_dim, heads, layers, seq_length)
 print("开始训练...")
 train(model, train_data, labels, freq_array, epochs=100,lr=0.01)
 
